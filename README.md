@@ -7,7 +7,7 @@ Chrome browser has some problems running WebGL local applications. It's very com
 
 [cite of the course "Interactive 3D Graphics" from Udacity]
 
-Another possibility, a more secure one, is to run a local server on your machine using Python, for instance. Just open up a shell/terminal/command line and type: 
+Another possibility, is to run a local server on your machine using Python, for instance. Just open up a shell/terminal/command line and type: 
 ```
 $ cd [repo-path]
 $ python -m http.server 8000
