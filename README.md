@@ -1,6 +1,8 @@
 # FIUBA KeplerOrbit
 ***Under development***
 
+![alt tag](https://github.com/sebastian-sampayo/FIUBA-KeplerOrbit/blob/master/screenshots/yet%20another%20screenshot.png)
+
 This is a WebGL application programmed during my Thesis. The idea is to take screenshots from it to use in the report. Furthermore, it will be used in my presentation during the Thesis defense, to explain astronomic terminology and classical elements of a keplerian orbit.
 
 ## Description
