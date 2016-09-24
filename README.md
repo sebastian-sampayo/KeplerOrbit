@@ -6,7 +6,7 @@
 This is a WebGL application programmed during my Thesis. The idea is to take screenshots from it to use in the report. Furthermore, it will be used in my presentation during the Thesis defense, to explain astronomic terminology and classical elements of a keplerian orbit.
 
 ## Description
-This application draws the Earth, the satellite, it's orbit, some common frames and reference objects used in my Thesis work. It is still under development, there are several things that don't show up in the gui controller, but are already coded. The way to see them is by making "true" the "visible" attribute from them, by hand, in the F12 console, or directly in the code. In some weeks it will be ready, with every option available.
+This application draws the Earth, the satellite, it's orbit, some common frames and reference objects used in my Thesis work. It is still under development, there are several things that don't show up in the gui controller, but are already coded. The way to see them is by making "true" the "visible" attribute from them, by hand, in the F12 console, or directly in the code. Some other things are still not coded. In some weeks it will be ready, with every option available.
 
 ## Browser issues
 Chrome browser has some problems running WebGL local applications. It's very common that an object with textures doesn't show up. On the other hand, if you use Firefox, normally there's no problem.
