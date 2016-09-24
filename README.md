@@ -1,4 +1,4 @@
-# FIUBA KeplerOrbit
+# KeplerOrbit
 ***Under development***
 
 ![alt tag](https://github.com/sebastian-sampayo/FIUBA-KeplerOrbit/blob/master/screenshots/yet%20another%20screenshot.png)
