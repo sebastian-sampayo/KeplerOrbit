@@ -1,7 +1,17 @@
 "use strict"; // good practice - see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
-////////////////////////////////////////////////////////////////////////////////
-//                                                                            //
-////////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************\
+  Engineering Faculty, University of Buenos Aires (FIUBA)
+  Electronic Engineering
+  An illustrative description of terminology for the thesis defense
+  2016
+ 
+  Sampayo, Sebastián Lucas
+  Padrón: 93793
+  e-mail: sebisampayo@gmail.com
+          ssampayo@fi.uba.ar
+ 
+  File: Javascript - WebGL application. Using THREE.js library.
+\*****************************************************************************/
 /*global THREE, Coordinates, $, document, window, dat*/
 
 // TODO:
@@ -11,12 +21,10 @@
 // - Sun
 // - Earth orbit around the Sun
 // - Epoch/date. Example: 19° April
-// - Pre-defined orbits: Molniya, ISS, GEO, Circular-LEO, Polar, SARE
-// - Enprolijar los ifs de render()
-// - orbit period function of semimajor axis
+// - Emprolijar los ifs de render()
 
 
-// Common stuff
+// Global variables
 var camera, scene, renderer;
 var cameraControls, guiController;
 var clock = new THREE.Clock();
@@ -30,13 +38,16 @@ var grid_step = 100;
 // Background
 // var background_color = 0xFFFFFF; // White
 var background_color = 0x000000; // Black
-var background = false; // true = Black,  false = White
+var background = true; // true = Black,  false = White
+var create_stars = true;
 // Orbit elements
 var semimajor = 300;
 var eccentricity = 0.5;
 var raan = 10;
 var argumentOfPerigee = 70;
 var inclination = -45;
+var meanAnomaly = 0;
+
 var trueAnom = 0;
 var eccAnom = 0;
 var orbit_period = 10; // seconds
@@ -60,6 +71,9 @@ var efficient = true;
 
 function deg2rad(deg) {
   return deg*Math.PI/180.0;
+}
+function rad2deg(rad) {
+  return rad*180.0/Math.PI;
 }
 
 function init() {
@@ -170,9 +184,9 @@ function createEarth() {
 }
 
 function updateEarth() {
-  if (play) {
+  // if (play) {
     hour_angle = 2*Math.PI / earth_period * t;
-  }
+  // }
   earth.rotation.z = hour_angle;
 }
 
@@ -361,7 +375,7 @@ function createSatellite() {
 
 function updateSatellite() {
   // Save distance before reset
-  // var r = satellite.position.length();
+  var r = satellite.position.length();
   // console.log(r)
   // Reset position, orientation and scale
   var minv = new THREE.Matrix4();
@@ -376,16 +390,50 @@ function updateSatellite() {
   // var mu = 398600441900000; // Standard gravitational parameter
   // var p = a * (1-e*e);
   // var h = Math.sqrt( mu * p);
-    // var w = 1000 / (r*r); // True speed = h / r^2
-  var w = 2*Math.PI / orbit_period; // Eccentric speed
-  eccAnom = w * t;
+  var ra = a*(1 + e);
+  var rp = a*(1 - e);
+  // Orbit period, around 10 seconds. Proportional to sqrt(a^3). Scale factor: 10/sqrt(300^3)
+  // T = sqrt(a^3) / sqrt(300^3) * 10
+  // => a = cbrt( ( T/10 * sqrt(300^3) )^2 )
+  orbit_period = Math.sqrt(a*a*a) / Math.sqrt(300*300*300) * 10;
+  
+  
+  // n: Mean motion
+  var n = 2 * Math.PI / orbit_period;
+  // M: Mean anomaly
+  // var M = n*t;
+  var M = n*t % (2*Math.PI);
+  meanAnomaly = rad2deg(M);
+  // trueAnom = M + (2*e - e*e*e/4 + 5/96 * Math.pow(e,5)) * Math.sin(M) ;
+              // + (5/4 * e*e - 11/24 * Math.pow(e,4) + 17/192*Math.pow(e,6)) * Math.sin(2*M) ;
+              // + 13/12 * e*e*e * Math.sin(3*M);
+  
+  eccAnom = M + (e - e*e*e/8 + Math.pow(e,5)/192) * Math.sin(M);
+  
+  // Other tries:
+  // var w = 2*Math.PI / orbit_period; // Eccentric speed
+  // var w_const =  2*Math.PI / orbit_period;
+  // var r_approx = rp + (ra-rp)/2 -(ra-rp)/2*Math.cos(w_const*t);
+  // var w = w_const * rp*rp / (r_approx*r_approx);
+  // eccAnom = w * t;
+  // trueAnom = t + 0.1*orbit_period*Math.sin(w_const * t);
+
+  
+  // eccAnom to trueAnom
   var cost = (Math.cos(eccAnom)-e) / (1 - e*Math.cos(eccAnom));
   var sint = (Math.sin(eccAnom)*Math.sqrt(1 - e*e)) / (1 - e*Math.cos(eccAnom));
   trueAnom = Math.acos( cost ) * Math.sign( sint );
   
+  
+  // trueAnom to eccAnom 
+  // eccAnom = 2 * Math.atan( Math.sqrt( (1-e)/(1+e) ) * Math.tan(trueAnom/2) );
+  // // var cosE = (e + Math.cos(trueAnom))/(1 + e*Math.cos(trueAnom));
+  // // var sinE = Math.sin(trueAnom)* Math.sqrt(1 - e*e) / (1 + e*Math.cos(trueAnom));
+  // // eccAnom = Math.acos( cosE ) * Math.sign( sinE );
+  
   // Rotate (attitude)
   var m0 = new THREE.Matrix4();
-  m0.makeRotationZ(trueAnom); // but here it is true anomaly
+  m0.makeRotationZ(trueAnom); // but here it is true anomaly // Rotates RPYaxes  
   // Translate
   var m1 = new THREE.Matrix4();
   // check: i think it's eccentric anomaly, not true.
@@ -402,21 +450,51 @@ function updateSatellite() {
 }
 
 function createStars() {
-  // create the geometry sphere
-  var geometry  = new THREE.SphereGeometry(500, 64, 64)
+  // --- Galaxy texture ---
+  // // create the geometry sphere
+  // var geometry  = new THREE.SphereGeometry(500, 64, 64)
 
-  var texloader = new THREE.TextureLoader();
-  texloader.crossOrigin = '';
-  var texture = texloader.load('textures/galaxy_starfield3.png');  
-  // create the material, using a texture of startfield
-  var material  = new THREE.MeshBasicMaterial( {
-    map: texture,
-    side: THREE.BackSide
-  } )
-  // create the mesh based on geometry and material
-  var mesh  = new THREE.Mesh(geometry, material)
+  // var texloader = new THREE.TextureLoader();
+  // texloader.crossOrigin = '';
+  // var texture = texloader.load('textures/galaxy_starfield3.png');  
+  // // create the material, using a texture of startfield
+  // var material  = new THREE.MeshBasicMaterial( {
+    // map: texture,
+    // side: THREE.BackSide
+  // } )
+  // // create the mesh based on geometry and material
+  // var mesh  = new THREE.Mesh(geometry, material)
+  // scene.add( mesh );
   
-  scene.add( mesh );
+  // --- Lots of dots ---
+  var N = 4000;
+  var d = 1500;
+  var x, y, z, sel;
+  
+  for (var i=0; i < N; i++){
+    var geometry = new THREE.SphereGeometry(1, 1, 1);
+    var material = new THREE.MeshLambertMaterial( { color: 0xFFFFFF } );
+    var mesh = new THREE.Mesh( geometry, material );
+    // -- Random position: --
+    // Fixed distance: d
+    x = Math.random()*d*2 - d;
+    y = Math.random()*d*2 - d;
+    z = Math.random()*d*2 - d;
+    
+    sel = Math.random();
+    if (sel < 1/3){
+      x = Math.sqrt(d*d - y*y - z*z) * Math.sign(Math.random()-.5);
+    } else if (sel > 2/3){
+      y = Math.sqrt(d*d - x*x - z*z) * Math.sign(Math.random()-.5);
+    } else {
+      z = Math.sqrt(d*d - x*x - y*y) * Math.sign(Math.random()-.5);
+    }
+    // ----------------------
+    mesh.position.set(x, y, z);
+    
+    scene.add( mesh );
+  }
+  
 }
 
 function createAxes() {
@@ -548,7 +626,9 @@ function createApplication() {
   createOrbit();
   updatePerifocalAxes();
   createSatellite();
-//  createStars();
+  if (create_stars) {
+    createStars();
+  }
   createLineOfApsides();
   createLineOfNodes();
   createEquatorialPlane();
@@ -576,7 +656,7 @@ function fillScene() {
   // Application
 	createApplication();
   // --- This is for r56 ---
-  // Rotate de scene to get the view I want. (can't modify camera.up property, workaround)
+  // Rotate de scene to get the view I want. (can't modify camera.up property, this is a workaround)
   // scene.matrixAutoUpdate = false;
   // scene.up.set(1, 0 , 0);
   // scene.rotation.y = 
@@ -609,18 +689,24 @@ function animate() {
 }
 
 function render() {
-  // Update time
-  if (play) {
-    t = clock.elapsedTime;
-  }
 	var delta = clock.getDelta();
 	cameraControls.update(delta);
+  // Update time
+  if (play) {
+    t = t + delta;
+    guiController.newMeanAnomaly = meanAnomaly;
+  }
+  if (guiController.newMeanAnomaly !== meanAnomaly){
+    meanAnomaly = guiController.newMeanAnomaly;
+    var n = 2 * Math.PI / orbit_period;
+    t = deg2rad(meanAnomaly)/n;
+  }
 	if (guiController.newBackground !== background) {
 	  background = guiController.newBackground;
 	  background_color = (background) ? 0x000000 : 0xFFFFFF;
     renderer.setClearColor( background_color, 1.0 ); 	  
 	}
-	if ( guiController.newGridXY !== gridXY.visible || guiController.newGridYZ !== gridYZ.visible || guiController.newGridXZ !== gridXZ.visible || guiController.newGround !== ground || guiController.newAxes !== axes.visible || guiController.newEcefAxes !== ecefAxes.visible || guiController.newRPYaxes !== RPYaxes.visible )
+	if ( guiController.newGridXY !== gridXY.visible || guiController.newGridYZ !== gridYZ.visible || guiController.newGridXZ !== gridXZ.visible || guiController.newGround !== ground || guiController.newAxes !== axes.visible || guiController.newEcefAxes !== ecefAxes.visible || guiController.newRPYaxes !== RPYaxes.visible || guiController.newPerifocalAxes !== perifocalAxes.visible)
   {
     // Update variables with gui-controller values
     gridXY.visible = guiController.newGridXY;
@@ -630,6 +716,35 @@ function render() {
 		axes.visible = guiController.newAxes;
 		ecefAxes.visible = guiController.newEcefAxes;		
 		RPYaxes.visible = guiController.newRPYaxes;
+    perifocalAxes.visible = guiController.newPerifocalAxes;
+  }
+  if (guiController.newPlayStop !== play) 
+  {
+    play = guiController.newPlayStop;
+  }
+  if (guiController.newGreenwich !== greenwich.visible) 
+  {
+    greenwich.visible = guiController.newGreenwich;
+  }
+  if (guiController.newCelestialSphere !== celestial_sphere.visible) 
+  {
+    celestial_sphere.visible = guiController.newCelestialSphere;
+  }
+  if (guiController.newEquator !== equator.visible) 
+  {
+    equator.visible = guiController.newEquator;
+  }
+  if (guiController.newLineOfApsides !== lineOfApsides.visible) 
+  {
+    lineOfApsides.visible = guiController.newLineOfApsides;
+  }
+  if (guiController.newLineOfNodes !== lineOfNodes.visible) 
+  {
+    lineOfNodes.visible = guiController.newLineOfNodes;
+  }
+  if (guiController.newEcliptic !== ecliptic.visible) 
+  {
+    ecliptic.visible = guiController.newEcliptic;
   }
   if ( guiController.newEccentricity !== eccentricity || guiController.newInclination !== inclination || guiController.newRaan !== raan || guiController.newArgumentOfPerigee !== argumentOfPerigee || guiController.newSemimajor !== semimajor)
 	{
@@ -663,6 +778,8 @@ function render() {
 	renderer.render(scene, camera);
 }
 
+// https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.0/dat.gui.js
+// https://workshop.chromeexperiments.com/examples/gui/#1--Basic-Usage
 function setupGui() {
 
 	guiController = {
@@ -675,32 +792,120 @@ function setupGui() {
 		newAxes: axes.visible,
 		newEcefAxes: ecefAxes.visible,		
 		newRPYaxes: RPYaxes.visible,
+    newPerifocalAxes: perifocalAxes.visible,
+    
     newSemimajor: semimajor,
     newEccentricity: eccentricity,
     newInclination: inclination,
     newRaan: raan,
-    newArgumentOfPerigee: argumentOfPerigee
+    newArgumentOfPerigee: argumentOfPerigee,
+    newMeanAnomaly: meanAnomaly,
+    
+    newPlayStop: play,
+    newGreenwich: greenwich.visible,
+    newEquator: equator.visible,
+    newLineOfApsides: lineOfApsides.visible,
+    newLineOfNodes: lineOfNodes.visible,
+    newCelestialSphere: celestial_sphere.visible,
+    newEcliptic: ecliptic.visible
 	};
+  
+    //Presets
+  var guiPresets = {
+    "preset": "Default",
+    "remembered": {
+      "Default": {
+        "0": {
+          newSemimajor: semimajor, // 300
+          newEccentricity: eccentricity,
+          newInclination: inclination,
+          newRaan: raan,
+          newArgumentOfPerigee: argumentOfPerigee,
+          newMeanAnomaly: meanAnomaly
+        }
+      },
+      "Circular": {
+        "0": {
+          newEccentricity: 0
+        }
+      },
+      "Molniya": {
+        "0": {
+          newSemimajor: Math.cbrt(Math.pow(earth_period/2.0 /10.0 * Math.sqrt(300*300*300),2)), // 480 
+          newEccentricity: 0.7,
+          newInclination: 63.4,
+          newRaan: 60,
+          newArgumentOfPerigee: -90,
+          newMeanAnomaly: meanAnomaly
+        }
+      },
+      "GEO": {
+        "0": {
+          newSemimajor: Math.cbrt(Math.pow(earth_period /10 * Math.sqrt(300*300*300),2)), // (755.95)
+          newEccentricity: 0,
+          newInclination: 0,
+          newRaan: 0,
+          newArgumentOfPerigee: 0,
+          newMeanAnomaly: meanAnomaly
+        }
+      },
+      "SARE": {
+        "0": {
+          newSemimajor: 110,
+          newEccentricity: 0,
+          newInclination: -83,
+          newRaan: -69,
+          newArgumentOfPerigee: 54,
+          newMeanAnomaly: meanAnomaly
+        }
+      },
+      "Inyección Tronador": {
+        "0": {
+          newSemimajor: 110,
+          newEccentricity: 0.0074,
+          newInclination: -83,
+          newRaan: -69,
+          newArgumentOfPerigee: 54,
+          newMeanAnomaly: meanAnomaly
+        }
+      }
+    },
+  };
 
-	var gui = new dat.GUI();
-  var f1 = gui.addFolder('Grid');
-	f1.add(guiController, "newGridXY").name("Show XY grid");
+	var gui = new dat.GUI({load: guiPresets});
+  gui.add( guiController, "newPlayStop" ).name("Play/Stop");
+  var f1 = gui.addFolder('References');
+	f1.add( guiController, "newGridXY").name("Show XY grid");
 	f1.add( guiController, "newGridYZ" ).name("Show YZ grid");
 	f1.add( guiController, "newGridXZ" ).name("Show XZ grid");
-	f1.add( guiController, "newGround" ).name("Show ground");
+	// f1.add( guiController, "newGround" ).name("Show ground");
 	f1.add( guiController, "newBackground" ).name("Black/White background");
+	f1.add( guiController, "newGreenwich" ).name("Greenwich meridian");
+	f1.add( guiController, "newEquator" ).name("Equator");
+	f1.add( guiController, "newLineOfApsides" ).name("Line of apsides"); // Singular: apsis/apse. Plural: apsides
+	f1.add( guiController, "newLineOfNodes" ).name("Line of nodes"); 
+	f1.add( guiController, "newCelestialSphere" ).name("Celestial sphere");
+	f1.add( guiController, "newEcliptic" ).name("Solar ecliptic");
 	var f2 = gui.addFolder('Axes');	
 	f2.add( guiController, "newAxes" ).name("Show ECI axes");
   f2.add( guiController, "newEcefAxes" ).name("Show ECEF axes");  	
   f2.add( guiController, "newRPYaxes" ).name("Show orbital RPY axes");
+  f2.add( guiController, "newPerifocalAxes" ).name("Show perifocal axes");
   var f3 = gui.addFolder('Orbit elements');
-  f3.add( guiController, "newSemimajor" ).min(100).max(1000).step(10).name("Semi-major axis");
+  f3.add( guiController, "newSemimajor" ).min(100).max(1000).step(5).name("Semi-major axis");
   f3.add( guiController, "newEccentricity" ).min(0).max(0.99).step(0.001).name("Eccentricity");
   f3.add( guiController, "newRaan" ).min(-180).max(180).step(1).name("Right ascension of the ascending node (RAAN)");
-  f3.add( guiController, "newInclination" ).min(-90).max(90).step(1).name("Inclination");
-  f3.add( guiController, "newArgumentOfPerigee" ).min(-180).max(180).step(1).name("Argument of Perigee");
+  f3.add( guiController, "newInclination" ).min(-180).max(180).step(1).name("Inclination");
+  f3.add( guiController, "newArgumentOfPerigee" ).min(-180).max(180).step(1).name("Argument of perigee");
+  // f3.add( guiController, "newMeanAnomaly" ).min(0).max(2*Math.PI).step(.01).name("Mean anomaly");
+  // f3.add( guiController, "newMeanAnomaly" ).min(0).max(2*Math.PI).step(.01).name("Mean anomaly").listen();
+  f3.add( guiController, "newMeanAnomaly" ).min(0).max(360).step(1).name("Mean anomaly").listen();
+
   
   f3.open();
+  
+  gui.remember(guiController);
+
 }
 
 try {
