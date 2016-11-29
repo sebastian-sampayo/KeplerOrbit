@@ -40,7 +40,7 @@ var grid_step = 100;
 var background_color = 0x000000; // Black
 var background = true; // true = Black,  false = White
 var create_stars = true;
-// Orbit elements
+// Orbit elements (default values)
 var semimajor = 300;
 var eccentricity = 0.5;
 var raan = 10;
@@ -467,7 +467,7 @@ function createStars() {
   // scene.add( mesh );
   
   // --- Lots of dots ---
-  var N = 4000;
+  var N = 5000;
   var d = 1500;
   var x, y, z, sel;
   
@@ -583,7 +583,8 @@ function updateLineOfNodes() {
   n.normalize();
   // Angle between Node vector and Y ECI axis:
   var iy = new THREE.Vector3( 0, 1, 0 );
-  var angle = Math.acos( iy.dot(n) ) * Math.sign(-n.x);
+  // var angle = Math.acos( iy.dot(n) ) * Math.sign(-n.x);
+  var angle = deg2rad(raan-90);
 
   // Finally, rotate lineOfNodes by angle, around Z ECI axis:
   // First scale,
@@ -598,7 +599,13 @@ function updateLineOfNodes() {
   var c = a*e;
   var i = inclination;
   var w = argumentOfPerigee;
-  var y = (c/10 + c*Math.cos(deg2rad(w)) ) * Math.sign( -i );
+  var y;
+  // if (i != 0) {
+    // y = (c/10 + c*Math.cos(deg2rad(w)) ) * Math.sign( -i );
+  // } else {
+    y = (c/10 - c*Math.cos(deg2rad(w)) );
+  // }
+  // console.log(y)
   m12.makeTranslation(0, y, 0);
   m1.premultiply(m12); // m1 = m12 * m1
   // Then, rotate
@@ -829,9 +836,19 @@ function setupGui() {
           newEccentricity: 0
         }
       },
+      "Aligned to ECI": {
+        "0": {
+          newSemimajor: 300,
+          newEccentricity: 0.5,
+          newInclination: 0,
+          newRaan: 0,
+          newArgumentOfPerigee: 0,
+          newMeanAnomaly: meanAnomaly
+        }
+      },
       "Molniya": {
         "0": {
-          newSemimajor: Math.cbrt(Math.pow(earth_period/2.0 /10.0 * Math.sqrt(300*300*300),2)), // 480 
+          newSemimajor: 476.22, // Math.cbrt(Math.pow(earth_period/2.0 /10.0 * Math.sqrt(300*300*300),2)), // 476.22 
           newEccentricity: 0.7,
           newInclination: 63.4,
           newRaan: 60,
@@ -841,7 +858,7 @@ function setupGui() {
       },
       "GEO": {
         "0": {
-          newSemimajor: Math.cbrt(Math.pow(earth_period /10 * Math.sqrt(300*300*300),2)), // (755.95)
+          newSemimajor: 755.95, //Math.cbrt(Math.pow(earth_period /10 * Math.sqrt(300*300*300),2)), // (755.95)
           newEccentricity: 0,
           newInclination: 0,
           newRaan: 0,
@@ -849,7 +866,7 @@ function setupGui() {
           newMeanAnomaly: meanAnomaly
         }
       },
-      "SARE": {
+      "LEO": {
         "0": {
           newSemimajor: 110,
           newEccentricity: 0,
@@ -859,7 +876,7 @@ function setupGui() {
           newMeanAnomaly: meanAnomaly
         }
       },
-      "Inyección Tronador": {
+      "Inyección Tronador (CoNAE)": {
         "0": {
           newSemimajor: 110,
           newEccentricity: 0.0074,

@@ -1,12 +1,12 @@
 # KeplerOrbit
-***Under development***
+<!--- ***Under development*** -->
 
 ![alt tag](https://github.com/sebastian-sampayo/FIUBA-KeplerOrbit/blob/master/screenshots/yet%20another%20screenshot.png)
 
-This is a WebGL application programmed during my Thesis. The objective is to take screenshots from it to use in the report. Furthermore, it will be used in my presentation during the Thesis defense, to explain astronomical terminology and classical elements of a keplerian orbit.
+This is a WebGL application programmed during my Thesis. The objective was to take screenshots from it to use in the report. Furthermore, it was used in my presentation during the Thesis defense, to explain astronomical terminology and classical elements of a Keplerian orbit.
 
 ## Description
-This application draws the Earth, the satellite, its orbit, some common frames and reference objects used in my Thesis work. It is still under development.
+This application draws the Earth, the satellite, its orbit, some common frames and reference objects used in my Thesis work.
 
 ## Browser issues
 Chrome browser has some problems running WebGL local applications. It's very common that an object with textures doesn't show up. On the other hand, if you use Firefox, normally there's no problem.
